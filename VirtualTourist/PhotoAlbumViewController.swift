@@ -40,11 +40,12 @@ class PhotoAlbumViewController: UIViewController {
         collectionView.delegate = self
         collectionView.dataSource = self
 
-        newCollectionButton.titleLabel?.text = "New Collection"
+        updateNewCollectionButton()
+//        newCollectionButton.titleLabel?.text = "New Collection"
         
         if (selectedPin.photos?.count == 0) {
             newCollectionButton.isEnabled = false
-            print(Thread.isMainThread)
+            
             getPhotosForPin()
         } else {
             for photo in selectedPin.photos! {
@@ -86,11 +87,8 @@ class PhotoAlbumViewController: UIViewController {
             getPhotosForPin()
         } else {
             deletePhotos()
-            do {
-                try stack.save()
-            } catch {
-                print("There was a problem saving")
-            }
+            stack.save()
+
             selectedIndexes = [IndexPath]()
         }
         
@@ -122,11 +120,8 @@ class PhotoAlbumViewController: UIViewController {
                     // placeholder
                     DispatchQueue.main.async {
                         self.photos = photos
-                        do {
-                            try self.stack.save()
-                        } catch {
-                            print("there was a problem saving photos")
-                        }
+                        self.stack.save()
+
                         self.collectionView.reloadData()
                         self.newCollectionButton.isEnabled = true
                     }
@@ -185,10 +180,14 @@ class PhotoAlbumViewController: UIViewController {
     
     func updateNewCollectionButton() {
         
-        if selectedIndexes.count > 0 {
-            newCollectionButton.titleLabel?.text = "Delete"
+
+
+        if selectedIndexes.isEmpty {
+
+            newCollectionButton.setTitle("New Collection", for: .normal)
         } else {
-            newCollectionButton.titleLabel?.text = "New Collection"
+
+            newCollectionButton.setTitle("Delete", for: .normal)
         }
     }
 
@@ -241,6 +240,12 @@ extension PhotoAlbumViewController: UICollectionViewDelegate, UICollectionViewDa
                     }
                 }
             }
+        }
+        
+        if (selectedIndexes.contains(indexPath)){
+            cell.imageView.alpha = 0.1
+        } else {
+            cell.imageView.alpha = 1.0
         }
         
         return cell

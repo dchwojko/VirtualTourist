@@ -32,7 +32,7 @@ class FlickrClient: NSObject {
 
         let url: URL = URL(string: urlString + escapedParameters(parameters: parameters))!
     
-        let request = NSMutableURLRequest(url: url as! URL)
+        let request = NSMutableURLRequest(url: url )
         request.httpMethod = "GET"
         let task = session.dataTask(with: request as URLRequest) { (data, response, error) in
             // helper function
@@ -85,7 +85,6 @@ class FlickrClient: NSObject {
     
     func photosForPin(pin: Pin, context: NSManagedObjectContext, completionHandler: @escaping (_ photos: [Photo]?, _ error: NSError?) -> Void) {
         
-        print(Thread.isMainThread)
         let bbox: String = "\(pin.longitude),\(pin.latitude),\(pin.longitude + 0.5),\(pin.latitude + 0.5)"
         var parameters: [String:AnyObject] = [
             FlickrClient.ParameterKeys.METHOD : "flickr.photos.search" as String as AnyObject,
@@ -100,7 +99,7 @@ class FlickrClient: NSObject {
         var urlString: String = urlStringBase + escapedParameters(parameters: parameters)
         
         getNumberOfPages(urlString: urlString) { (pages, error) in
-            print(Thread.isMainThread)
+            
             guard error == nil else {
                 completionHandler(nil, error)
                 return
@@ -124,7 +123,7 @@ class FlickrClient: NSObject {
                 if let result = result {
                     if let photosDictionary = result["photos"] as? [String: AnyObject] {
                         if let photoArrayOfDictionaries = photosDictionary["photo"] as? [[String:AnyObject]] {
-                            print(Thread.isMainThread)
+                            
                             completionHandler(Photo.photosFromArrayOfDictionaries(dictionaries: photoArrayOfDictionaries, context: context), nil)
                             
                         }
@@ -180,7 +179,7 @@ class FlickrClient: NSObject {
     
     func getNumberOfPages(urlString: String, completionHandler: @escaping (_ pages: Int, _ error: NSError?) -> Void) {
         let parameters: [String:AnyObject] = [:]
-        print(Thread.isMainThread)
+        
         taskForGETMethod(urlString: urlString, parameters: parameters) { (result, error) in
             guard error == nil else {
                 print("There was an error getting the number of pages")

@@ -28,12 +28,12 @@ public class Photo: NSManagedObject {
     static func photosFromArrayOfDictionaries(dictionaries: [[String:AnyObject]], context: NSManagedObjectContext) -> [Photo] {
         var photos = [Photo]()
         for photoDictionary in dictionaries {
-            print(Thread.isMainThread)
+            
             
             context.performAndWait({
                 let entity = NSEntityDescription.entity(forEntityName: "Photo", in: context)
                 let photo = NSManagedObject(entity: entity!, insertInto: context) as! Photo
-                photo.imagePath = photoDictionary["url_m"] as! String
+                photo.imagePath = photoDictionary["url_m"] as? String
                 photos.append(photo)
             })
         }
