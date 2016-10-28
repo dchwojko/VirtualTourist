@@ -23,6 +23,11 @@ class PhotoAlbumViewController: UIViewController {
     var selectedPin : Pin!
     var selectedIndexes = [IndexPath]()
     
+    enum cellHighlight: CGFloat {
+        case on = 0.1
+        case off = 1.0
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -31,17 +36,8 @@ class PhotoAlbumViewController: UIViewController {
         stack = delegate.stack
         
         updateMapView()
-        
-        if (selectedPin == nil) {
-            fatalError("selectedPin is nil")
-        }
-        
-        // SET COLLECTION VIEW DELEGATE & DATA SOURCE
-        collectionView.delegate = self
-        collectionView.dataSource = self
 
         updateNewCollectionButton()
-//        newCollectionButton.titleLabel?.text = "New Collection"
         
         if (selectedPin.photos?.count == 0) {
             newCollectionButton.isEnabled = false
@@ -56,9 +52,11 @@ class PhotoAlbumViewController: UIViewController {
     }
     
     func updateMapView() {
+ 
         let initialLocation = CLLocationCoordinate2D(latitude: selectedPin.latitude, longitude: selectedPin.longitude)
         let regionRadius: CLLocationDistance = 1000
         let coordinateRegion = MKCoordinateRegionMakeWithDistance(initialLocation, regionRadius * 10.0, regionRadius * 10.0)
+        
         mapView.setRegion(coordinateRegion, animated: false)
         mapView.isUserInteractionEnabled = false
         
@@ -66,9 +64,12 @@ class PhotoAlbumViewController: UIViewController {
     }
     
     func dropPin(longitude: Double, latitude: Double) {
+        
         let annotation = MKPointAnnotation()
+        
         annotation.coordinate.longitude = longitude
         annotation.coordinate.latitude = latitude
+        
         mapView.addAnnotation(annotation)
     }
     
@@ -98,7 +99,9 @@ class PhotoAlbumViewController: UIViewController {
     }
 
     func getPhotosForPin() {
+       
         FlickrClient.sharedInstance().photosForPin(pin: selectedPin, context: stack.mainContext) { (photos, error) in
+        
             guard error == nil else {
                 print("There was an error retrieving photos for pin")
                 return
@@ -135,19 +138,25 @@ class PhotoAlbumViewController: UIViewController {
         var photosToBeDeleted = [Photo]()
         
         collectionView.performBatchUpdates({
+   
             // First sort the selectedIndexes - I think lack of sort was causing crashes depending on order of selected images
             var sortedIndexes: [IndexPath]
+            
             sortedIndexes = self.selectedIndexes.sorted {$0.row > $1.row}
             
             // Build the list of photo objects to be deleted
             for indexPath in sortedIndexes {
+            
                 let photoObject = self.photos[indexPath.row]
+                
                 self.photos.remove(at: indexPath.row)
                 self.collectionView.deleteItems(at: [indexPath])
+                
                 photosToBeDeleted.append(photoObject)
 
             }
             }, completion: { (completed) in
+                
                 if self.photos.count == 0 {
                     let queue = DispatchQueue(label: "myQueue")
                     queue.async {
@@ -167,16 +176,6 @@ class PhotoAlbumViewController: UIViewController {
         
         selectedIndexes = [IndexPath]()
     }
-
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
-    }
-    */
     
     func updateNewCollectionButton() {
         
@@ -201,23 +200,18 @@ extension PhotoAlbumViewController: UICollectionViewDelegate, UICollectionViewDa
         return photos.count
     }
     
-    func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return 1
-    }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: reuseIdentifier, for: indexPath) as! CollectionViewCell
         
-        // TO DO: Configure the cell
         cell.backgroundColor = UIColor.gray
 
-        //
         let photoObject = photos[indexPath.row]
         
         if let photoImage = photoObject.image {
             cell.imageView.image = photoImage
         } else {
-            // TO DO: insert placeholder image
+            
             cell.imageView.image = UIImage(named: "PlaceholderImage")
             
             cell.activityIndicator.startAnimating()
@@ -243,22 +237,28 @@ extension PhotoAlbumViewController: UICollectionViewDelegate, UICollectionViewDa
         }
         
         if (selectedIndexes.contains(indexPath)){
-            cell.imageView.alpha = 0.1
+            cell.imageView.alpha = cellHighlight.on.rawValue
         } else {
-            cell.imageView.alpha = 1.0
+            cell.imageView.alpha = cellHighlight.off.rawValue
         }
         
         return cell
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+  
         let cell = collectionView.cellForItem(at: indexPath) as! CollectionViewCell
+        
         if let index = selectedIndexes.index(of: indexPath) {
+        
             selectedIndexes.remove(at: index)
-            cell.imageView.alpha = 1.0
+            cell.imageView.alpha = cellHighlight.off.rawValue
+            
         } else {
+            
             selectedIndexes.append(indexPath)
-            cell.imageView.alpha = 0.1
+            cell.imageView.alpha = cellHighlight.on.rawValue
+            
         }
         
         updateNewCollectionButton()
@@ -267,18 +267,25 @@ extension PhotoAlbumViewController: UICollectionViewDelegate, UICollectionViewDa
 }
 
 extension PhotoAlbumViewController: MKMapViewDelegate {
+  
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+    
         let identifier: String = "Pin"
         var view: MKPinAnnotationView
+        
         if let dequeuedView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKPinAnnotationView {
+        
             dequeuedView.annotation = annotation
             view = dequeuedView
+            
         } else {
+            
             view = MKPinAnnotationView(annotation: annotation, reuseIdentifier: identifier)
             view.canShowCallout = false
             view.animatesDrop = true
             view.isDraggable = false
             view.pinTintColor = UIColor.orange
+            
         }
         return view
     }

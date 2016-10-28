@@ -10,7 +10,7 @@ import Foundation
 import CoreData
 import UIKit
 
-class FlickrClient: NSObject {
+class FlickrClient {
     var session = URLSession.shared
     
     // OK
@@ -105,11 +105,12 @@ class FlickrClient: NSObject {
                 return
             }
             
+            // randomize page selection
             let randomPage = Int(arc4random_uniform(UInt32(pages)) + 1)
             
-            parameters["page"] = randomPage as AnyObject?
+            parameters[FlickrClient.ParameterKeys.PAGE] = randomPage as AnyObject?
             
-            
+            // reset url with additional page parameter
             urlString = urlStringBase + self.escapedParameters(parameters: parameters)
             
             self.taskForGETMethod(urlString: urlString, parameters: parameters) { (result, error) in

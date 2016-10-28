@@ -38,16 +38,20 @@ class TravelLocationsViewController: UIViewController {
     }
     
     func restoreMapView() {
-        // TO DO: get previous region and zoom level
+        //  Retreive map settings (center & span) via NSUserDefaults manager
         let defaultManager = UserDefaults.standard
+        
         if let longitude = defaultManager.object(forKey: "longitude") as? CLLocationDegrees, let latitude = defaultManager.object(forKey: "latitude") as? CLLocationDegrees, let longitudeSpan = defaultManager.object(forKey: "longitudeSpan") as? CLLocationDegrees, let latitudeSpan = defaultManager.object(forKey: "latitudeSpan") as? CLLocationDegrees {
+        
             mapView.region.center = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+            
             mapView.region.span = MKCoordinateSpan(latitudeDelta: latitudeSpan, longitudeDelta: longitudeSpan)
         }
     }
     
     func saveMapView() {
         let defaultManager = UserDefaults.standard
+        
         defaultManager.set(mapView.region.center.longitude, forKey: "longitude")
         defaultManager.set(mapView.region.center.latitude, forKey: "latitude")
         defaultManager.set(mapView.region.span.longitudeDelta, forKey: "longitudeSpan")
@@ -55,19 +59,25 @@ class TravelLocationsViewController: UIViewController {
     }
     
     func restorePins() {
+        
         let pins = getPins()
+        
         for pin in pins {
             dropPin(longitude: pin.longitude, latitude: pin.latitude)
         }
     }
     
     func getPins() -> [Pin] {
-        // TO DO: 
+        
         var pins = [Pin]()
+        
         stack.mainContext.performAndWait( {
+        
             let fetchRequest: NSFetchRequest<Pin> = Pin.fetchRequest()
+            
             do {
-                var searchResults = try self.stack.mainContext.fetch(fetchRequest)
+                let searchResults = try self.stack.mainContext.fetch(fetchRequest)
+               
                 for pin in searchResults {
                     pins.append(pin)
                 }
@@ -79,27 +89,27 @@ class TravelLocationsViewController: UIViewController {
     }
 
     @IBAction func editButtonAction(_ sender: UIBarButtonItem) {
-        if (bEditMode) {
-            bEditMode = false
-            editButton.title = "Edit"
-        } else {
-            bEditMode = true
-            editButton.title = "Done"
-        }
+        editButton.title = bEditMode ? "Edit" : "Done"
+        bEditMode = !bEditMode
+
     }
     @IBAction func longPressAction(_ sender: UILongPressGestureRecognizer) {
+        
         // Only do something if not in edit mode
         if (!bEditMode) {
+            
             // Only drop on begin long press
             if (sender.state == UIGestureRecognizerState.began) {
+        
                 let touchPoint = sender.location(in: mapView)
                 let coordinates = mapView.convert(touchPoint, toCoordinateFrom: mapView)
                 
                 dropPin(longitude: coordinates.longitude, latitude: coordinates.latitude)
+                
                 createPinObject(longitude: coordinates.longitude, latitude: coordinates.latitude)
             }
             
-            // TO DO: Handle drag and drop pin
+            // FUTURE WORK: Handle drag and drop pin
             if (sender.state == UIGestureRecognizerState.changed) {
                 // update pin coordinates
             }
@@ -111,9 +121,12 @@ class TravelLocationsViewController: UIViewController {
     }
     
     func dropPin(longitude: Double, latitude: Double) {
+        
         let annotation = MKPointAnnotation()
+        
         annotation.coordinate.longitude = longitude
         annotation.coordinate.latitude = latitude
+        
         mapView.addAnnotation(annotation)
     }
     
@@ -122,8 +135,10 @@ class TravelLocationsViewController: UIViewController {
             
             let entity = NSEntityDescription.entity(forEntityName: "Pin", in: self.stack.mainContext)
             let pin = NSManagedObject(entity: entity!, insertInto: self.stack.mainContext)
+        
             pin.setValue(longitude, forKey: "longitude")
             pin.setValue(latitude, forKey: "latitude")
+            
             self.stack.save()
         })
     }
@@ -131,24 +146,33 @@ class TravelLocationsViewController: UIViewController {
 }
 
 extension TravelLocationsViewController: MKMapViewDelegate {
+    
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+    
         let identifier: String = "Pin"
         var view: MKPinAnnotationView
+        
         if let dequeuedView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKPinAnnotationView {
+        
             dequeuedView.annotation = annotation
             view = dequeuedView
+        
         } else {
+        
             view = MKPinAnnotationView(annotation: annotation, reuseIdentifier: identifier)
             view.canShowCallout = false
             view.animatesDrop = true
             view.isDraggable = false
             view.pinTintColor = UIColor.orange
+        
         }
         return view
     }
     
     func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+      
         if (bEditMode) {
+        
             // DESELECT ANNOTATION
             mapView.deselectAnnotation(view.annotation, animated: false)
             
@@ -159,9 +183,10 @@ extension TravelLocationsViewController: MKMapViewDelegate {
             
             // REMOVE FROM VIEW
             mapView.removeAnnotation(view.annotation!)
+            
         } else {
             
-            // TO DO: INSTANTIATE NEXT CONTROLLER AND PUSH
+            // INSTANTIATE NEXT CONTROLLER AND PUSH
             let controller = self.storyboard?.instantiateViewController(withIdentifier: "photoAlbumViewController") as! PhotoAlbumViewController
             controller.selectedPin = getPinWithCoordinates(longitude: (view.annotation?.coordinate.longitude)!, latitude: (view.annotation?.coordinate.latitude)!)
             controller.mapView = mapView
@@ -179,12 +204,18 @@ extension TravelLocationsViewController: MKMapViewDelegate {
     }
     
     func getPinWithCoordinates(longitude: Double, latitude: Double) -> Pin? {
+      
         var pin: Pin?
+        
         stack.mainContext.performAndWait( {
+        
             let fetchRequest: NSFetchRequest<Pin> = Pin.fetchRequest()
             let predicate = NSPredicate(format: "longitude == %@ AND latitude == %@", argumentArray: [longitude, latitude])
+            
             fetchRequest.predicate = predicate
+            
             do {
+            
                 let searchResults = try self.stack.mainContext.fetch(fetchRequest)
                 if (searchResults.count > 0) {
                     pin = searchResults[0]
