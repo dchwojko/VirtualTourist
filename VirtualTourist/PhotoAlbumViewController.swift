@@ -44,6 +44,7 @@ class PhotoAlbumViewController: UIViewController {
         
         if (selectedPin.photos?.count == 0) {
             newCollectionButton.isEnabled = false
+            print(Thread.isMainThread)
             getPhotosForPin()
         } else {
             for photo in selectedPin.photos! {
@@ -77,8 +78,10 @@ class PhotoAlbumViewController: UIViewController {
             photos.removeAll()
             
             // REMOVE ALL PHOTOS FOR PIN
-            selectedPin.removeFromPhotos(selectedPin.photos!)
-            
+            self.stack.mainContext.performAndWait({
+                self.selectedPin.removeFromPhotos(self.selectedPin.photos!)
+            })
+            selectedIndexes = [IndexPath]()
             // GET NEW PHOTO SET FOR PIN
             getPhotosForPin()
         } else {
@@ -88,7 +91,10 @@ class PhotoAlbumViewController: UIViewController {
             } catch {
                 print("There was a problem saving")
             }
+            selectedIndexes = [IndexPath]()
         }
+        
+        selectedIndexes = [IndexPath]()
         
         updateNewCollectionButton()
     }
@@ -105,7 +111,10 @@ class PhotoAlbumViewController: UIViewController {
                     if (self.selectedPin == nil) {
                         fatalError("selectedPin is nil")
                     }
-                    photo.pin = self.selectedPin
+                    self.stack.mainContext.performAndWait({
+                        photo.pin = self.selectedPin
+                    })
+                    
                 }
                 
                 let queue = DispatchQueue(label: "myQueue")
@@ -131,13 +140,17 @@ class PhotoAlbumViewController: UIViewController {
         var photosToBeDeleted = [Photo]()
         
         collectionView.performBatchUpdates({
-            // Build the phtoosToBDeleted array
-            for indexPath in self.selectedIndexes {
+            // First sort the selectedIndexes - I think lack of sort was causing crashes depending on order of selected images
+            var sortedIndexes: [IndexPath]
+            sortedIndexes = self.selectedIndexes.sorted {$0.row > $1.row}
+            
+            // Build the list of photo objects to be deleted
+            for indexPath in sortedIndexes {
                 let photoObject = self.photos[indexPath.row]
                 self.photos.remove(at: indexPath.row)
                 self.collectionView.deleteItems(at: [indexPath])
                 photosToBeDeleted.append(photoObject)
-//                self.selectedPin.removeFromPhotos(photoObject)
+
             }
             }, completion: { (completed) in
                 if self.photos.count == 0 {
@@ -151,9 +164,11 @@ class PhotoAlbumViewController: UIViewController {
                 }
             })
         
-        for photo in photosToBeDeleted {
-            stack.mainContext.delete(photo)
-        }
+        stack.mainContext.performAndWait({
+            for photo in photosToBeDeleted {
+                self.stack.mainContext.delete(photo)
+            }
+            })
         
         selectedIndexes = [IndexPath]()
     }

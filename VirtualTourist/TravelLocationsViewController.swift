@@ -63,14 +63,19 @@ class TravelLocationsViewController: UIViewController {
     
     func getPins() -> [Pin] {
         // TO DO: 
-        let fetchRequest: NSFetchRequest<Pin> = Pin.fetchRequest()
-        do {
-            let pins = try stack.mainContext.fetch(fetchRequest)
-            return pins
-        } catch {
-            print("There was a problem fetching pins")
-            return [Pin]()
-        }
+        var pins = [Pin]()
+        stack.mainContext.performAndWait( {
+            let fetchRequest: NSFetchRequest<Pin> = Pin.fetchRequest()
+            do {
+                var searchResults = try self.stack.mainContext.fetch(fetchRequest)
+                for pin in searchResults {
+                    pins.append(pin)
+                }
+            } catch {
+                print("There was a problem fetching pins")
+            }
+        })
+        return pins
     }
 
     @IBAction func editButtonAction(_ sender: UIBarButtonItem) {
@@ -113,11 +118,14 @@ class TravelLocationsViewController: UIViewController {
     }
     
     func createPinObject(longitude: Double, latitude: Double) {
-        let entity = NSEntityDescription.entity(forEntityName: "Pin", in: stack.mainContext)
-        let pin = NSManagedObject(entity: entity!, insertInto: stack.mainContext)
-        pin.setValue(longitude, forKey: "longitude")
-        pin.setValue(latitude, forKey: "latitude")
-        stack.save()
+        stack.mainContext.performAndWait({
+            
+            let entity = NSEntityDescription.entity(forEntityName: "Pin", in: self.stack.mainContext)
+            let pin = NSManagedObject(entity: entity!, insertInto: self.stack.mainContext)
+            pin.setValue(longitude, forKey: "longitude")
+            pin.setValue(latitude, forKey: "latitude")
+            self.stack.save()
+        })
     }
    
 }
@@ -171,20 +179,21 @@ extension TravelLocationsViewController: MKMapViewDelegate {
     }
     
     func getPinWithCoordinates(longitude: Double, latitude: Double) -> Pin? {
-        let fetchRequest: NSFetchRequest<Pin> = Pin.fetchRequest()
-        let predicate = NSPredicate(format: "longitude == %@ AND latitude == %@", argumentArray: [longitude, latitude])
-        fetchRequest.predicate = predicate
-        do {
-            let searchResults = try stack.mainContext.fetch(fetchRequest)
-            if (searchResults.count > 0) {
-                return searchResults[0]
-            } else {
-                return nil
+        var pin: Pin?
+        stack.mainContext.performAndWait( {
+            let fetchRequest: NSFetchRequest<Pin> = Pin.fetchRequest()
+            let predicate = NSPredicate(format: "longitude == %@ AND latitude == %@", argumentArray: [longitude, latitude])
+            fetchRequest.predicate = predicate
+            do {
+                let searchResults = try self.stack.mainContext.fetch(fetchRequest)
+                if (searchResults.count > 0) {
+                    pin = searchResults[0]
+                }
+            } catch {
+                print("There was a problem getting pin with specified coordinates")
             }
-        } catch {
-            print("There was a problem getting pin with specified coordinates")
-            return nil
-        }
+        })
+        return pin
     }
 }
 
